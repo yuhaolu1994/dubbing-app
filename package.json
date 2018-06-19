@@ -1,0 +1,37 @@
+{
+  "name": "DubbingApp",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "start": "node node_modules/react-native/local-cli/cli.js start",
+    "test": "jest"
+  },
+  "dependencies": {
+    "create-react-class": "^15.6.3",
+    "lodash": "^4.17.10",
+    "mockjs": "^1.0.1-beta3",
+    "query-string": "^6.1.0",
+    "react": "16.3.1",
+    "react-addons-update": "^15.6.2",
+    "react-native": "0.55.4",
+    "react-native-button": "^2.3.0",
+    "react-native-elements": "^0.19.1",
+    "react-native-image-picker": "^0.26.10",
+    "react-native-progress": "^3.5.0",
+    "react-native-sk-countdown": "^1.0.1",
+    "react-native-vector-icons": "^4.6.0",
+    "react-native-video": "^2.2.0",
+    "react-navigation": "^2.3.0",
+    "rn-countdown": "^0.5.1",
+    "sha1": "^1.1.1"
+  },
+  "devDependencies": {
+    "babel-jest": "23.0.1",
+    "babel-preset-react-native": "4.0.0",
+    "jest": "23.1.0",
+    "react-test-renderer": "16.3.1"
+  },
+  "jest": {
+    "preset": "react-native"
+  }
+}
