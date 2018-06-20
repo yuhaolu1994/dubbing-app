@@ -396,14 +396,6 @@ export default class VideoDetails extends React.Component {
                     </View>
                 </View>
 
-                {/*<ProgressBarAndroid*/}
-                {/*color={'#ee753c'}*/}
-                {/*styleAttr={'Horizontal'}*/}
-                {/*progress={this.state.videoProgress}*/}
-                {/*indeterminate={false}*/}
-                {/*/>*/}
-
-
                 <FlatList
                     showsVerticalScrollIndicator={false}
                     data={this.state.dataSource}
@@ -451,9 +443,7 @@ export default class VideoDetails extends React.Component {
 
                         <Button
                             style={styles.submitBtn}
-                            onPress={() => this._submit()}>
-                            Comment
-                        </Button>
+                            onPress={() => this._submit()}>Comment</Button>
 
                     </View>
                 </Modal>

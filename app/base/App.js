@@ -61,6 +61,15 @@ export default class App extends React.Component {
 
     }
 
+    _logout() {
+        AsyncStorage.removeItem('user');
+
+        this.setState({
+            login: false,
+            user: null
+        });
+    }
+
 
     render() {
 
@@ -68,6 +77,6 @@ export default class App extends React.Component {
             return <Login _afterLogin={(user) => this._afterLogin(user)}/>;
         }
 
-        return <AppTabNavigator />;
+        return <AppTabNavigator screenProps={{ user: this.state.user, logout: () => this._logout()}}/>;
     }
 }

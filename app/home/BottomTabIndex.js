@@ -18,7 +18,6 @@ const HomeStack = createStackNavigator({
             headerTitleStyle: styles.headerTitle,
             headerTintColor: '#fff'
         }),
-        initialRouteName: 'Home'
     }
 );
 

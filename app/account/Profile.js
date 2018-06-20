@@ -51,8 +51,9 @@ export default class Profile extends React.Component {
 
     constructor(props) {
         super(props);
+        let user = this.props.screenProps.user || {};
         this.state = {
-            user: {},
+            user: user,
             avatarProgress: 0,
             avatarUploading: false,
             modalVisible: false
@@ -89,6 +90,7 @@ export default class Profile extends React.Component {
 
     _getUser() {
         let that = this;
+
         AsyncStorage.getItem('user')
             .then((data) => {
                 let user;
@@ -110,6 +112,7 @@ export default class Profile extends React.Component {
 
     _pickPhoto() {
         let that = this;
+
         ImagePicker.showImagePicker(photoOptions, (response) => {
             if (response.didCancel) {
                 return;
@@ -259,9 +262,6 @@ export default class Profile extends React.Component {
         this._asyncUser();
     }
 
-    _logout() {
-        AsyncStorage.removeItem('user');
-    }
 
 
     render() {
@@ -276,7 +276,7 @@ export default class Profile extends React.Component {
 
                 <View style={styles.header}>
                     <Text style={styles.headerTitle}>Your Account</Text>
-                    <Text style={styles.toolbarEdit} onPress={() => this._edit()}>EDIT</Text>
+                    <Text style={styles.toolbarEdit} onPress={() => this._edit()}>EDITT</Text>
                 </View>
 
                 {
@@ -341,7 +341,7 @@ export default class Profile extends React.Component {
                                 autoCapitalize={'none'}
                                 autoCorrect={true}
                                 defaultValue={user.nickname}
-                                onChange={(text) => {
+                                onChangeText={(text) => {
                                     this._changeUserState('nickname', text);
                                 }}/>
                         </View>
@@ -354,7 +354,7 @@ export default class Profile extends React.Component {
                                 autoCapitalize={'none'}
                                 autoCorrect={true}
                                 defaultValue={user.breed}
-                                onChange={(text) => {
+                                onChangeText={(text) => {
                                     this._changeUserState('breed', text);
                                 }}/>
                         </View>
@@ -368,7 +368,7 @@ export default class Profile extends React.Component {
                                 autoCorrect={true}
                                 defaultValue={user.age}
                                 keyboardType={'phone-pad'}
-                                onChange={(text) => {
+                                onChangeText={(text) => {
                                     this._changeUserState('age', text);
                                 }}/>
                         </View>
@@ -407,7 +407,7 @@ export default class Profile extends React.Component {
 
                 <ActionButton
                     style={styles.btn}
-                    onPress={() => this._logout()}>Logout</ActionButton>
+                    onPress={this.props.screenProps.logout}>Logout</ActionButton>
 
             </View>
         );
@@ -434,7 +434,7 @@ const styles = StyleSheet.create({
     },
     toolbarEdit: {
         position: 'absolute',
-        right: 15,
+        right: 14,
         top: 14,
         color: '#fff',
         textAlign: 'right',
