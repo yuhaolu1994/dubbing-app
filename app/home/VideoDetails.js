@@ -38,7 +38,7 @@ export default class VideoDetails extends React.Component {
             currentTime: 0,
 
             // video player
-            // rate: 1,
+            rate: 1,
             repeat: false,
             muted: false,
             resizeMode: 'contain',

@@ -15,9 +15,8 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import ImagePicker from 'react-native-image-picker';
 import {config} from "../utils/Config";
 import HttpUtils from "../utils/HttpUtils";
-import sha1 from 'sha1';
 import * as Progress from 'react-native-progress';
-import { Button } from 'react-native-elements';
+import {Button} from 'react-native-elements';
 import ActionButton from "react-native-button";
 
 let width = Dimensions.get('window').width;
@@ -35,17 +34,6 @@ const photoOptions = {
         path: 'images'
     }
 };
-
-const CLOUDINARY = {
-    cloud_name: 'dubbingapp',
-    api_key: '159272366345356',
-    api_secret: 'uR5Nx38KZ6w-PTpju1KAcxZrVdA',
-    base: 'http://res.cloudinary.com/dubbingapp',
-    image: 'https://api.cloudinary.com/v1_1/dubbingapp/image/upload',
-    video: 'https://api.cloudinary.com/v1_1/dubbingapp/video/upload',
-    audio: 'https://api.cloudinary.com/v1_1/dubbingapp/raw/upload',
-};
-
 
 export default class Profile extends React.Component {
 
@@ -85,7 +73,13 @@ export default class Profile extends React.Component {
             return id;
         }
 
-        return CLOUDINARY.base + '/' + type + '/upload/' + id;
+        if (id.indexOf('avatar/') > -1) {
+            return config.cloudinary.base + '/' + type + '/upload/' + id;
+        }
+
+        console.log('http://pb3k12o07.bkt.clouddn.com/' + id);
+
+        return 'http://pb3k12o07.bkt.clouddn.com/' + id;
     }
 
     _getUser() {
@@ -110,6 +104,20 @@ export default class Profile extends React.Component {
             });
     }
 
+    _getQiniuToken() {
+        let accessToken = this.state.user.accessToken;
+        let signatureURL = config.api.base + config.api.signature;
+
+        return HttpUtils.post(signatureURL, {
+            accessToken: accessToken,
+            type: 'avatar',
+            cloud: 'qiniu'
+        })
+            .catch((error) => {
+                console.log(error);
+            })
+    }
+
     _pickPhoto() {
         let that = this;
 
@@ -118,51 +126,34 @@ export default class Profile extends React.Component {
                 return;
             }
 
-            let avatarData = 'data:image/jpeg;base64,' + response.data;
+            let uri = response.uri;
 
-            let timestamp = Date.now();
-            let tags = 'app,avatar';
-            let folder = 'avatar';
-            let accessToken = that.state.user.accessToken;
-            let signatureURL = config.api.base + config.api.signature;
-
-            HttpUtils.post(signatureURL, {
-                accessToken: accessToken,
-                timestamp: timestamp,
-                folder: folder,
-                tags: tags,
-            })
+            that._getQiniuToken()
                 .then((data) => {
                     if (data && data.success) {
-                        // data.data
-                        let signature = 'folder=' + folder + '&tags=' + tags
-                            + '&timestamp=' + timestamp + CLOUDINARY.api_secret;
-
-                        signature = sha1(signature);
-
+                        let token = data.data.token;
+                        let key = data.data.key;
                         let body = new FormData();
 
-                        body.append('folder', folder);
-                        body.append('signature', signature);
-                        body.append('tags', tags);
-                        body.append('timestamp', timestamp);
-                        body.append('api_key', CLOUDINARY.api_key);
-                        body.append('resource_type', 'image');
-                        body.append('file', avatarData);
+                        body.append('token', token);
+                        body.append('key', key);
+                        body.append('file', {
+                            type: 'image/jpeg',
+                            uri: uri,
+                            name: key
+                        });
 
                         that._upload(body);
                     }
                 })
-                .catch((error) => {
-                    console.log(error);
-                })
+
         });
     }
 
     _upload(body) {
         let that = this;
         let xhr = new XMLHttpRequest();
-        let url = CLOUDINARY.image;
+        let url = config.qiniu.upload;
 
         this.setState({
             avatarUploading: true,
@@ -192,9 +183,16 @@ export default class Profile extends React.Component {
                 console.log('parse fails');
             }
 
-            if (response && response.public_id) {
+            if (response) {
                 let user = this.state.user;
-                user.avatar = response.public_id;
+
+                if (response.public_id) {
+                    user.avatar = response.public_id;
+                }
+
+                if (response.key) {
+                    user.avatar = response.key;
+                }
 
                 that.setState({
                     avatarUploading: false,
@@ -263,10 +261,9 @@ export default class Profile extends React.Component {
     }
 
 
-
     render() {
         let user = this.state.user;
-        console.log(user);
+
         return (
             <View style={styles.container}>
                 <StatusBar
@@ -517,7 +514,7 @@ const styles = StyleSheet.create({
     btn: {
         padding: 10,
         marginTop: 10,
-        marginLeft:10,
+        marginLeft: 10,
         marginRight: 10,
         backgroundColor: 'transparent',
         borderColor: '#ee735c',

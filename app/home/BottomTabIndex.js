@@ -47,13 +47,14 @@ export const AppTabNavigator = createBottomTabNavigator(
                         iconName = `ios-more${focused ? '' : '-outline'}`;
                         break;
                 }
-                return <Ionicons name={iconName} size={25} color={tintColor}/>;
+                return <Ionicons name={iconName} size={30} color={tintColor}/>;
             },
         }),
-        initialRouteName: 'ProfilePage',
+        initialRouteName: 'CreatePage',
         tabBarOptions: {
             activeTintColor: 'tomato',
             inactiveTintColor: 'gray',
+            showLabel: false
         },
     }
 );
