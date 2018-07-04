@@ -10,17 +10,17 @@ export default class VideoItem extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            liked: false
+            liked: this.props.liked
         };
     }
 
     _up() {
-        var up = !this.state.liked;
+        let up = !this.state.liked;
         let url = config.api.base + config.api.up;
         let body = {
             _id: this.props._id,
             up: up ? 'yes' : 'no',
-            accessToken: 'abc'
+            accessToken: this.props.accessToken
         };
         let that = this;
 
@@ -49,11 +49,14 @@ export default class VideoItem extends React.Component {
                     <Text style={styles.title}>{this.props.title}</Text>
                     <TouchableOpacity onPress={() => this.props.navigate('Details', {
                         videoUri: this.props.video,
-                        author: this.props.author,
-                        title: this.props.title
+                        author_avatar: this.props.author_avatar,
+                        nickname: this.props.nickname,
+                        title: this.props.title,
+                        user: this.props.user,
+                        creation_id: this.props._id
                     })}>
                         <ImageBackground
-                            source={{uri: this.props.thumb}}
+                            source={{uri: this.props.qiniu_thumb}}
                             style={styles.thumb}
                             resizeMode='cover'
                         >

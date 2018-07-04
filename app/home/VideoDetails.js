@@ -5,7 +5,7 @@ import {
     ActivityIndicator,
     Text,
     TouchableOpacity,
-    FlatList, Image, TextInput, Modal, Alert,
+    FlatList, Image, TextInput, Modal, Alert, AsyncStorage,
 } from "react-native";
 import React from "react";
 import Video from "react-native-video";
@@ -14,6 +14,7 @@ import CommentItem from "./CommentItem";
 import {config} from "../utils/Config";
 import HttpUtils from "../utils/HttpUtils";
 import Button from 'react-native-button';
+import {avatar, video} from "../utils/ThumbUtils";
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -45,6 +46,8 @@ export default class VideoDetails extends React.Component {
 
             // comments dataSource
             dataSource: '',
+            user: null,
+
 
             // modal
             content: '',
@@ -55,7 +58,7 @@ export default class VideoDetails extends React.Component {
     }
 
     _onLoaded = (data) => {
-        console.log(data)
+        // console.log(data)
     };
 
     _onProgress = (data) => {
@@ -125,18 +128,38 @@ export default class VideoDetails extends React.Component {
         return (
             <CommentItem
                 id={item._id}
-                avatar={item.replyBy.avatar}
-                nickname={item.replyBy.nickname}
+                avatar={avatar(this.state.user.avatar)}
+                nickname={this.state.user.nickname}
                 content={item.content}
             />
         );
     }
 
     componentDidMount() {
-        this._fetchData(1);
+
+        let that = this;
+
+        AsyncStorage.getItem('user')
+            .then((data) => {
+                let user;
+
+                if (data) {
+                    user = JSON.parse(data);
+                }
+
+                if (user && user.accessToken) {
+                    that.setState({
+                        user: user
+                    }, () => {
+                        that._fetchData();
+                    });
+                }
+            });
+
     }
 
     _fetchData(page) {
+
         let that = this;
 
         this.setState({
@@ -144,23 +167,29 @@ export default class VideoDetails extends React.Component {
         });
 
         HttpUtils.get(config.api.base + config.api.comment, {
-            accessToken: 'abc',
+            accessToken: this.state.user.accessToken,
             page: page,
-            creation: '124',
+            creation: this.props.navigation.getParam('creation_id', 'no_id')
         })
-            .then((commentsData) => {
-                if (commentsData.success) {
-                    let items = cachedResults.items.slice();
+            .then((data) => {
+                if (data && data.success) {
 
-                    cachedResults.items = items.concat(commentsData.data);
-                    cachedResults.nextPage += 1;
-                    cachedResults.total = commentsData.total;
+                    if (data.data.length > 0) {
 
-                    that.setState({
-                        isLoadingTail: false,
-                        dataSource: cachedResults.items
-                    });
+                        let items = cachedResults.items.slice();
 
+                        cachedResults.items = items.concat(data.data);
+                        cachedResults.nextPage += 1;
+                        cachedResults.total = data.total;
+
+                        that.setState({
+                            isLoadingTail: false,
+                            dataSource: cachedResults.items
+                            // dataSource: data.data
+                        });
+
+                        cachedResults.items = [];
+                    }
                 }
             })
             .catch(error => {
@@ -217,9 +246,11 @@ export default class VideoDetails extends React.Component {
             isSending: true
         }, () => {
             let body = {
-                accessToken: 'abc',
-                creation: '123',
-                content: this.state.content
+                accessToken: this.state.user.accessToken,
+                comment: {
+                    creation: this.props.navigation.getParam('creation_id', 'no_id'),
+                    content: this.state.content
+                }
             };
 
             let url = config.api.base + config.api.comment;
@@ -227,16 +258,9 @@ export default class VideoDetails extends React.Component {
             HttpUtils.post(url, body)
                 .then((data) => {
                     if (data.success) {
-                        var items = cachedResults.items.slice();
-                        var content = that.state.content;
+                        let items = cachedResults.items.slice();
 
-                        items = [{
-                            content: content,
-                            replyBy: {
-                                nickname: 'Tom',
-                                avatar: 'http://dummyimage.com/640x640/f70842)'
-                            }
-                        }].concat(items);
+                        items = data.data.concat(items);
                         cachedResults.items = items;
                         cachedResults.total += 1;
 
@@ -261,14 +285,14 @@ export default class VideoDetails extends React.Component {
         });
     }
 
-    _renderHeader(author, title) {
+    _renderHeader(authorAvatar, nickname, title) {
 
         return (
             <View style={styles.listHeader}>
                 <View style={styles.infoBox}>
-                    <Image style={styles.avatar} source={{uri: author.avatar}}/>
+                    <Image style={styles.avatar} source={{uri: avatar(authorAvatar)}}/>
                     <View style={styles.descBox}>
-                        <Text style={styles.nickname}>{author.nickname}</Text>
+                        <Text style={styles.nickname}>{nickname}</Text>
                         <Text style={styles.title}>{title}</Text>
                     </View>
                 </View>
@@ -322,7 +346,8 @@ export default class VideoDetails extends React.Component {
     render() {
         const {navigation} = this.props;
         const videoUri = navigation.getParam('videoUri', 'NO-URI');
-        const author = navigation.getParam('author', 'author details');
+        const authorAvatar = navigation.getParam('author_avatar', 'author_avatar details');
+        const nickname = navigation.getParam('nickname', 'nickName details');
         const title = navigation.getParam('title', 'no title');
 
         return (
@@ -330,7 +355,7 @@ export default class VideoDetails extends React.Component {
                 <View style={styles.videoBox}>
                     <Video
                         ref={(ref) => this.videoPlayer = ref}
-                        source={{uri: videoUri}}
+                        source={{uri: video(videoUri)}}
                         style={styles.video}
                         volume={2.0}
                         muted={this.state.muted}
@@ -403,12 +428,12 @@ export default class VideoDetails extends React.Component {
                     // not use key
                     keyExtractor={(item, index) => index.toString()}
 
-                    ListHeaderComponent={() => this._renderHeader(author, title)}
+                    ListHeaderComponent={() => this._renderHeader(authorAvatar, nickname, title)}
                     ListFooterComponent={() => this._renderFooter()}
 
-                    onEndReached={() => {
-                        this._fetchMoreData();
-                    }}
+                    // onEndReached={() => {
+                    //     this._fetchMoreData();
+                    // }}
                     // onEndReachedThreshold={20}
                 />
 

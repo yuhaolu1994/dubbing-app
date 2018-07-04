@@ -7,11 +7,12 @@ import {
     FlatList,
     Dimensions,
     RefreshControl,
-    ActivityIndicator
+    ActivityIndicator, AsyncStorage
 } from "react-native";
 import VideoItem from "./VideoItem";
 import HttpUtils from "../utils/HttpUtils";
 import {config} from "../utils/Config";
+import {thumb} from "../utils/ThumbUtils";
 
 let width = Dimensions.get('window').width;
 
@@ -32,16 +33,35 @@ export default class HomeVideo extends React.Component {
             isLoadingTail: false,
             dataSource: null,
             isRefreshing: false,
+            user: null
         };
     }
 
     componentDidMount() {
-        this._fetchData(1);
+        let that = this;
+
+        AsyncStorage.getItem('user')
+            .then((data) => {
+                let user;
+
+                if (data) {
+                    user = JSON.parse(data);
+                }
+
+                if (user && user.accessToken) {
+                    that.setState({
+                        user: user
+                    }, () => {
+                        that._fetchData(1);
+                    });
+                }
+            });
+
     }
 
     _fetchData(page) {
         let that = this;
-        
+
         if (page !== 0) {
             this.setState({
                 isLoadingTail: true
@@ -52,25 +72,39 @@ export default class HomeVideo extends React.Component {
             });
         }
 
+        let user = this.state.user;
 
         HttpUtils.get(config.api.base + config.api.creations, {
-            accessToken: 'abc',
+            accessToken: user.accessToken,
             page: page
         })
             .then((data) => {
-                if (data.success) {
-                    let items = cachedResults.items.slice();
+                if (data && data.success) {
+                    if (data.data.length > 0) {
 
-                    if (page !== 0) {
-                        cachedResults.items = items.concat(data.data);
-                        cachedResults.nextPage += 1;
-                    } else {
-                        cachedResults.items = data.data.concat(items);
-                    }
+                        data.data.map((item) => {
+                            let votes = item.votes || [];
 
-                    cachedResults.total = data.total;
+                            if (votes.indexOf(user._id) > -1) {
+                                item.liked = true;
+                            } else {
+                                item.liked = false;
+                            }
 
-                    setTimeout(() => {
+                            return item;
+                        });
+
+                        let items = cachedResults.items.slice();
+
+                        if (page !== 0) {
+                            cachedResults.items = items.concat(data.data);
+                            cachedResults.nextPage += 1;
+                        } else {
+                            cachedResults.items = data.data.concat(items);
+                        }
+
+                        cachedResults.total = data.total;
+
                         if (page !== 0) {
                             that.setState({
                                 isLoadingTail: false,
@@ -82,7 +116,8 @@ export default class HomeVideo extends React.Component {
                                 dataSource: cachedResults.items
                             });
                         }
-                    }, 20);
+
+                    }
                 }
             })
             .catch(error => {
@@ -156,10 +191,14 @@ export default class HomeVideo extends React.Component {
             <VideoItem
                 _id={item._id}
                 title={item.title}
-                thumb={item.thumb}
-                video={item.video}
-                author={item.author}
-                navigate={this.props.navigation.navigate}/>
+                qiniu_thumb={thumb(item.qiniu_thumb)}
+                video={item.qiniu_video}
+                author_avatar={item.author.avatar}
+                nickname={item.author.nickname}
+                navigate={this.props.navigation.navigate}
+                user={this.state.user}
+                liked={item.liked}
+                accessToken={this.state.user.accessToken}/>
         );
     }
 
@@ -195,7 +234,7 @@ export default class HomeVideo extends React.Component {
                     onEndReached={() => {
                         this._fetchMoreData();
                     }}
-                    showsVerticalScrollIndicator = {false}
+                    showsVerticalScrollIndicator={false}
                     onEndReachedThreshold={20}
                 />
             </View>

@@ -6,9 +6,14 @@ export const config = {
             'Content-Type': 'application/json',
         },
     },
+    backup: {
+        avatar: 'http://res.cloudinary.com/dubbingapp/image/upload/v1530224129/avatar/bvncnyzfd7xzcdhahdss.jpg'
+    },
     qiniu: {
         upload: 'http://up.qiniu.com',
         video: 'http://pb48cggiq.bkt.clouddn.com/',
+        thumb: 'http://pb48cggiq.bkt.clouddn.com/',
+        avatar: 'http://pb3k12o07.bkt.clouddn.com/',
     },
     cloudinary: {
         cloud_name: 'dubbingapp',

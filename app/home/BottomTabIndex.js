@@ -5,7 +5,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import React from "react";
 import VideoDetails from "./VideoDetails";
 import HomeVideo from "./HomeVideo";
-import {StyleSheet} from "react-native";
+import {StyleSheet, View} from "react-native";
 
 const HomeStack = createStackNavigator({
         Home: HomeVideo,
@@ -16,7 +16,8 @@ const HomeStack = createStackNavigator({
             title: 'Video Detail',
             headerStyle: styles.header,
             headerTitleStyle: styles.headerTitle,
-            headerTintColor: '#fff'
+            headerTintColor: '#fff',
+            // headerRight: (<View></View>)
         }),
     }
 );
@@ -70,6 +71,9 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
         alignSelf: 'center',
+        textAlign: 'center',
+        justifyContent: 'center',
+        width: '75%'
     },
 });
 

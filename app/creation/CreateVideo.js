@@ -9,7 +9,7 @@ import {
     Dimensions,
     Alert,
     ProgressBarAndroid,
-    AsyncStorage
+    AsyncStorage, Modal, TextInput
 } from "react-native";
 import ImagePicker from "react-native-image-picker";
 import Video from "react-native-video";
@@ -21,10 +21,11 @@ import Sound from 'react-native-sound';
 import {AudioRecorder, AudioUtils} from 'react-native-audio';
 import _ from 'lodash';
 import * as Progress from 'react-native-progress';
+import ActionButton from "react-native-button";
 
 
 let width = Dimensions.get('window').width;
-// let height = Dimensions.get('window').height;
+let height = Dimensions.get('window').height;
 
 const videoOptions = {
     title: 'Select Video',
@@ -47,6 +48,12 @@ let defaultState = {
 
     videoId: null,
     audioId: null,
+
+    title: '',
+    modalVisible: false,
+    publishing: false,
+    willPublish: false,
+    publishProgress: 0.2,
 
     // video upload
     video: null,
@@ -198,6 +205,18 @@ export default class CreateVideo extends React.Component {
 
             this.videoPlayer.seek(this.state.videoTotal - 0.01);
         }
+    }
+
+    _closeModal() {
+        this.setState({
+            modalVisible: false
+        })
+    }
+
+    _showModal() {
+        this.setState({
+            modalVisible: true
+        })
     }
 
     componentDidMount() {
@@ -416,6 +435,12 @@ export default class CreateVideo extends React.Component {
                         if (data && data.success) {
                             let mediaState = {};
                             mediaState[type + 'Id'] = data.data;
+
+                            if (type === 'audio') {
+                                that._showModal();
+                                mediaState.willPublish = true;
+                            }
+
                             that.setState(mediaState);
                         } else {
                             if (type === 'video') {
@@ -447,6 +472,51 @@ export default class CreateVideo extends React.Component {
         }
 
         xhr.send(body);
+    }
+
+    _submit() {
+        let that = this;
+        let body = {
+            title: this.state.title,
+            videoId: this.state.videoId,
+            audioId: this.state.audioId
+        };
+
+        let creationURL = config.api.base + config.api.creations;
+        let user = this.state.user;
+
+        if (user && user.accessToken) {
+            body.accessToken = user.accessToken;
+
+            this.setState({
+               publishing: true,
+               publishProgress: 0.4
+            });
+
+            HttpUtils
+                .post(creationURL, body)
+                .catch((err) => {
+                    console.log(err);
+                    Alert.alert('Video upload failed');
+                })
+                .then((data) => {
+                    if (data && data.success) {
+                        this.setState({
+                            publishProgress: 1
+                        });
+                        that._closeModal();
+                        Alert.alert('Video upload success');
+
+                        let state = _.clone(defaultState);
+                        that.setState(state);
+                    } else {
+                        this.setState({
+                            publishing: false
+                        });
+                        Alert.alert('Video upload failed');
+                    }
+                })
+        }
     }
 
     render() {
@@ -547,6 +617,8 @@ export default class CreateVideo extends React.Component {
                                     }
 
                                 </View>
+
+
                             </View>
                             : <TouchableOpacity style={styles.uploadContainer}
                                                 onPress={() => this._pickVideo()}>
@@ -626,6 +698,78 @@ export default class CreateVideo extends React.Component {
                     }
 
                 </View>
+
+                <Modal
+                    animationType={'fade'}
+                    visible={this.state.modalVisible}
+                    onRequestClose={() => {
+                        alert('Modal has been closed.');
+                    }}>
+                    <View style={styles.modalContainer}>
+                        <Ionicons
+                            name={'ios-close-outline'}
+                            style={styles.closeIcon}
+                            onPress={() => this._closeModal()}/>
+
+                        {
+                            this.state.audioUploaded && !this.state.publishing
+                            ? <View style={styles.fieldBox}>
+                                    <TextInput
+                                        placeholder={'Input your title'}
+                                        style={styles.inputField}
+                                        autoCapitalize={'none'}
+                                        autoCorrect={true}
+                                        defaultValue={this.state.title}
+                                        onChangeText={(text) => {
+                                            this.setState({
+                                                title: text
+                                            })
+                                        }}/>
+                                </View>
+                            : null
+                        }
+
+                        {
+                            this.state.publishing
+                            ? <View style={styles.loadingBox}>
+                                    <Text style={styles.loadingText}>
+                                        Wait a moment, creating your own video...</Text>
+
+                                    {
+                                        this.state.willPublish
+                                        ? <Text style={styles.loadingText}>
+                                                Mixing your video and audio...</Text>
+                                        : null
+                                    }
+
+                                    {
+                                        this.state.publishProgress > 0.3
+                                        ? <Text style={styles.loadingText}>
+                                                Uploading now...</Text>
+                                        : null
+                                    }
+
+                                    <Progress.Circle
+                                        size={60}
+                                        showsText={true}
+                                        color={'#ee735c'}
+                                        progress={this.state.publishProgress}/>
+                                </View>
+                            : null
+                        }
+
+                        <View style={styles.submitBox}>
+                            {
+                                this.state.audioUploaded && !this.state.publishing
+                                ?  <ActionButton
+                                        style={styles.btn}
+                                        onPress={() => this._submit()}>Post videos</ActionButton>
+                                : null
+                            }
+                        </View>
+
+                    </View>
+                </Modal>
             </View>
         );
     }
@@ -787,6 +931,61 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         fontSize: 16,
         fontWeight: '600',
+        color: '#ee735c'
+    },
+    modalContainer: {
+        width: width,
+        height: height,
+        paddingTop: 50,
+        backgroundColor: '#fff'
+    },
+    closeIcon: {
+        position: 'absolute',
+        fontSize: 32,
+        right: 20,
+        top: 30,
+        color: '#ee735c'
+    },
+    loadingBox: {
+        width: width,
+        height: 50,
+        marginTop: 10,
+        padding: 15,
+        alignItems: 'center'
+    },
+    loadingText: {
+        marginBottom: 10,
+        textAlign: 'center',
+        color: '#333'
+    },
+    inputField: {
+        height: 36,
+        textAlign: 'center',
+        color: '#666',
+        fontSize: 15
+    },
+    fieldBox: {
+        width: width - 40,
+        height: 36,
+        marginTop: 30,
+        marginLeft: 20,
+        marginRight: 20,
+        borderBottomWidth: 1,
+        borderBottomColor: '#eaeaea',
+    },
+    submitBox: {
+        marginTop: 50,
+        padding: 15
+    },
+    btn: {
+        padding: 10,
+        marginTop: 65,
+        marginLeft: 10,
+        marginRight: 10,
+        backgroundColor: 'transparent',
+        borderColor: '#ee735c',
+        borderWidth: 1,
+        borderRadius: 4,
         color: '#ee735c'
     },
 });

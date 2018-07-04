@@ -92,7 +92,6 @@ export default class Profile extends React.Component {
                     user = JSON.parse(data);
                 }
 
-                console.log(user.nickname);
                 if (user.accessToken !== null) {
                     that.setState({
                         user: user
