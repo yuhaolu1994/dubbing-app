@@ -56,7 +56,7 @@ const AccountStack = createStackNavigator({
         navigationOptions: ({navigation}) => ({
             title: 'Your Account',
             headerStyle: styles.header,
-            headerTitleStyle: styles.homeHeaderTitle,
+            headerTitleStyle: styles.accountHeaderTitle,
             headerTintColor: '#fff',
             headerRight: (
                 <Text
@@ -130,6 +130,15 @@ const styles = StyleSheet.create({
         backgroundColor: '#ee735c',
     },
     homeHeaderTitle: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: '600',
+        alignSelf: 'center',
+        textAlign: 'center',
+        justifyContent: 'center',
+        width: '95%'
+    },
+    accountHeaderTitle: {
         color: '#fff',
         fontSize: 16,
         fontWeight: '600',

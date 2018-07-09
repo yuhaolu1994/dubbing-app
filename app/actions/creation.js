@@ -64,6 +64,8 @@ export const fetchCreations = (feed) => {
             .then((data) => {
                 if (data && data.success) {
                     if (data.data.length > 0) {
+                        console.log(data.data);
+
                         data.data.map((item) => {
                             const votes = item.votes || [];
                             if (user && votes.indexOf(user._id) > -1) {
@@ -81,6 +83,8 @@ export const fetchCreations = (feed) => {
                         } else {
                             newVideoList = videoList.concat(data.data);
                         }
+
+                        console.log(newVideoList);
 
                         dispatch({
                             type: types.FETCH_CREATIONS_FULLFILLED,
