@@ -1,62 +1,62 @@
 import React from "react";
-import {ImageBackground, Text, TouchableHighlight, View, StyleSheet, Dimensions, TouchableOpacity, Alert} from "react-native";
+import {ImageBackground, Text, TouchableHighlight, View, StyleSheet, Dimensions, TouchableOpacity,} from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import {config} from "../utils/Config";
-import HttpUtils from "../utils/HttpUtils";
+import {config} from "../../common/Config";
+import HttpUtils from "../../common/HttpUtils";
+import {thumb} from "../../common/ThumbUtils";
+
 
 let width = Dimensions.get('window').width;
 
 export default class VideoItem extends React.Component {
     constructor(props) {
         super(props);
+        const row = this.props.row;
+
         this.state = {
-            liked: this.props.liked
+            up: row.liked,
+            row: row
         };
     }
 
     _up() {
-        let up = !this.state.liked;
-        let url = config.api.base + config.api.up;
+        let up = !this.state.up;
+        let url = config.api.up;
         let body = {
             _id: this.props._id,
             up: up ? 'yes' : 'no',
-            accessToken: this.props.accessToken
+            accessToken: this.props.user.accessToken
         };
+
         let that = this;
 
         HttpUtils.post(url, body)
             .then((data) => {
-                if (data.success) {
+                if (data && data.success) {
                     that.setState({
-                        liked: up
+                        up: up
                     });
                 } else {
-                    Alert.alert('Like failed, try again');
+                    that.props.popAlert('Oh no', 'Like failed, try again');
                 }
             })
             .catch((error) => {
                 console.log(error);
-                Alert.alert('Like failed, try again');
+                that.props.popAlert('Oh no', 'Like failed, try again');
             });
 
     }
 
 
     render() {
+        const row = this.state.row;
         return (
             <TouchableHighlight>
                 <View style={styles.item}>
-                    <Text style={styles.title}>{this.props.title}</Text>
-                    <TouchableOpacity onPress={() => this.props.navigate('Details', {
-                        videoUri: this.props.video,
-                        author_avatar: this.props.author_avatar,
-                        nickname: this.props.nickname,
-                        title: this.props.title,
-                        user: this.props.user,
-                        creation_id: this.props._id
-                    })}>
+                    <Text style={styles.title}>{row.title}</Text>
+                    <TouchableOpacity onPress={this.props.onSelect.bind(this)}>
                         <ImageBackground
-                            source={{uri: this.props.qiniu_thumb}}
+                            source={{uri: thumb(row.qiniu_thumb)}}
                             style={styles.thumb}
                             resizeMode='cover'
                         >
@@ -70,15 +70,13 @@ export default class VideoItem extends React.Component {
                     <View style={styles.itemFooter}>
                         <View style={styles.handleBox}>
                             <Ionicons
-                                onPress={() => this._up()}
-                                name={this.state.liked ? 'ios-heart' : 'ios-heart-outline'}
+                                onPress={this._up.bind(this)}
+                                name={this.state.up ? 'ios-heart' : 'ios-heart-outline'}
                                 size={28}
-                                style={[styles.up, this.state.liked ? null : styles.down]}
-                            />
+                                style={[styles.up, this.state.up ? null : styles.down]}/>
                             <Text
                                 style={styles.handleText}
-                                onPress={() => this._up()}
-                            >Like</Text>
+                                onPress={this._up.bind(this)}>Like</Text>
                         </View>
 
                         <View style={styles.handleBox}>

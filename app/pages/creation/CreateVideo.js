@@ -7,25 +7,26 @@ import {
     TouchableOpacity,
     Image,
     Dimensions,
-    Alert,
     ProgressBarAndroid,
-    AsyncStorage, Modal, TextInput
+    Modal, TextInput, Platform
 } from "react-native";
 import ImagePicker from "react-native-image-picker";
 import Video from "react-native-video";
-import HttpUtils from "../utils/HttpUtils";
-import {config} from "../utils/Config";
-import CountDownText from "../utils/CountDownText";
+import HttpUtils from "../../common/HttpUtils";
+import {config} from "../../common/Config";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import Sound from 'react-native-sound';
 import {AudioRecorder, AudioUtils} from 'react-native-audio';
 import _ from 'lodash';
 import * as Progress from 'react-native-progress';
 import ActionButton from "react-native-button";
+import Popup from "../../components/popup";
 
+import {connect} from 'react-redux';
+import * as appActions from '../../actions/app';
+import {bindActionCreators} from "redux";
 
-let width = Dimensions.get('window').width;
-let height = Dimensions.get('window').height;
+let {width, height} = Dimensions.get('window');
 
 const videoOptions = {
     title: 'Select Video',
@@ -63,11 +64,11 @@ let defaultState = {
 
     // video loads
     videoProgress: 0.01,
-    videoTotal: 0,
+    duration: 0,
     currentTime: 0,
-    paused: false,
 
     // count down
+    countText: '',
     counting: false,
     recording: false,
 
@@ -89,58 +90,60 @@ let defaultState = {
     audioUploadedProgress: 0.14,
 };
 
-export default class CreateVideo extends React.Component {
+class CreateVideo extends React.Component {
     constructor(props) {
         super(props);
-        let user = this.props.screenProps.user || {};
-        let state = _.clone(defaultState);
-        state.user = user;
-        this.state = state;
+        this.state = _.clone(defaultState);
     }
 
-    _onLoaded = (data) => {
-        console.log(data)
-    };
-
-    _onProgress = (data) => {
-        let duration = data.playableDuration;
-        let currentTime = data.currentTime;
-        let percent = Number((currentTime / duration).toFixed(2));
-
+    _onLoad(data) {
         this.setState({
-            videoTotal: duration,
-            currentTime: Number(data.currentTime.toFixed(2)),
-            videoProgress: percent,
-        });
+            duration: data.duration
+        })
     };
 
-    _onEnd = async () => {
+    async _onProgress(data) {
+        this.setState({
+            currentTime: data.currentTime
+        })
+    };
+
+    _finishRecording(didSucceed, filePath) {
+        this.setState({
+            finished: didSucceed
+        })
+    }
+
+    async _onEnd() {
+
+        let newState = {};
 
         if (this.state.recording) {
+            newState.recordDone = true;
+            newState.recording = false;
+            newState.paused = true;
 
             try {
-                let audioPath = await AudioRecorder.stopRecording();
-                console.log(audioPath);
+                const audioPath = await AudioRecorder.stopRecording();
+                if (Platform.OS === 'android') {
+                    this._finishRecording(true, audioPath)
+                }
             } catch (error) {
-                console.error(error);
+                console.error(error)
             }
-
-            this.setState({
-                videoProgress: 1,
-                recordDone: true,
-                recording: false,
-                paused: true
-            });
+        } else if (this.state.audioPlaying) {
+            newState.audioPlaying = false;
+            newState.paused = true
+        } else {
+            newState.videoUploaded = true;
+            newState.paused = true
         }
 
-        this.setState({
-            videoProgress: 1,
-            paused: true
-        });
+        this.setState(newState);
 
     };
 
-    _onError = () => {
+    _onError() {
         this.setState({
             videoOK: false
         });
@@ -148,10 +151,8 @@ export default class CreateVideo extends React.Component {
 
     _preview() {
         this.setState({
-            videoProgress: 0,
             audioPlaying: true
         });
-
 
         const sound = new Sound(this.state.audioPath, Sound.MAIN_BUNDLE, (error) => {
             if (error) {
@@ -180,27 +181,56 @@ export default class CreateVideo extends React.Component {
     async _record() {
         this.videoPlayer.seek(0);
 
+        await this._initAudio();
+
+        if (this.state.recording) {
+            console.log('Already recording');
+            return;
+        }
+
         this.setState({
-            videoProgress: 0,
             counting: false,
             recording: true,
             recordDone: false,
             paused: false
         });
 
-        this._initAudio();
-
         try {
-            await AudioRecorder.startRecording();
+            AudioRecorder.startRecording();
         } catch (error) {
             console.error(error);
+        }
+
+    }
+
+    _tick() {
+        let that = this;
+        let countText = this.state.countText;
+
+        countText--;
+
+        if (countText === 0) {
+            this._record()
+        } else {
+            setTimeout(function () {
+                that.setState({
+                    countText: countText
+                }, function () {
+                    that._tick()
+                })
+            }, 1000)
         }
     }
 
     _counting() {
+        let that = this;
+        let countText = 3;
         if (!this.state.counting && !this.state.recording && !this.state.audioPlaying) {
             this.setState({
-                counting: true
+                counting: true,
+                countText: countText
+            }, function () {
+                that._tick();
             });
 
             this.videoPlayer.seek(this.state.videoTotal - 0.01);
@@ -213,92 +243,72 @@ export default class CreateVideo extends React.Component {
         })
     }
 
-    _showModal() {
-        this.setState({
-            modalVisible: true
-        })
-    }
-
     componentDidMount() {
-        this._getUser();
         this._initAudio();
     }
 
-    _getUser() {
-        let that = this;
-
-        AsyncStorage.getItem('user')
-            .then((data) => {
-                let user;
-
-                if (data) {
-                    user = JSON.parse(data);
-                }
-
-                if (user.accessToken !== null) {
-                    that.setState({
-                        user: user
-                    });
-                }
-            });
-
-    }
-
-    _uploadAudio() {
+    async _uploadAudio() {
         let that = this;
         let tags = 'app,audio';
         let folder = 'audio';
         let timestamp = Date.now();
 
-        this._getToken({
-            type: 'audio',
-            timestamp: timestamp,
-            cloud: 'cloudinary',
-        })
-            .catch((err) => {
-                console.log(err);
-            })
-            .then((data) => {
-                if (data && data.success) {
-                    console.log(data);
-                    // data.data
-                    let signature = data.data.token;
-                    let key = data.data.key;
-                    let body = new FormData();
+        try {
+            const data = await this._getToken({
+                type: 'audio',
+                timestamp: timestamp,
+                cloud: 'cloudinary',
+            });
 
-                    body.append('folder', folder);
-                    body.append('signature', signature);
-                    body.append('tags', tags);
-                    body.append('timestamp', timestamp);
-                    body.append('api_key', config.cloudinary.api_key);
-                    body.append('resource_type', 'video');
-                    body.append('file', {
-                        type: 'video/mp4',
-                        uri: 'file://' + that.state.audioPath,
-                        name: key
-                    });
+            if (data && data.success) {
 
-                    that._upload(body, 'audio')
-                }
-            })
+                let signature = data.data.token;
+                let key = data.data.key;
+                let body = new FormData();
+
+                body.append('folder', folder);
+                body.append('signature', signature);
+                body.append('tags', tags);
+                body.append('timestamp', timestamp);
+                body.append('api_key', config.cloudinary.api_key);
+                body.append('resource_type', 'video');
+                body.append('file', {
+                    type: 'video/mp4',
+                    uri: 'file://' + that.state.audioPath,
+                    name: key
+                });
+
+                that._upload(body, 'audio')
+            }
+        } catch (e) {
+            console.log(e)
+        }
+    }
+
+    getCurrentTimePercentage() {
+        if (this.state.currentTime > 0) {
+            return parseFloat(this.state.currentTime) / parseFloat(this.state.duration)
+        } else {
+            return 0
+        }
     }
 
     _initAudio() {
-        let audioPath = this.state.audioPath;
+        const audioPath = this.state.audioPath;
 
         AudioRecorder.prepareRecordingAtPath(audioPath, {
             SampleRate: 22050,
             Channels: 1,
-            AudioQuality: "Low",
+            AudioQuality: "High",
             AudioEncoding: "aac",
-            AudioEncodingBitRate: 32000
         });
+
     }
 
     _getToken(body) {
-        let signatureURL = config.api.base + config.api.signature;
+        let signatureURL = config.api.signature;
 
-        body.accessToken = this.state.user.accessToken;
+        body.accessToken = this.props.user.accessToken;
 
         return HttpUtils.post(signatureURL, body);
     }
@@ -315,8 +325,6 @@ export default class CreateVideo extends React.Component {
             let state = _.clone(defaultState);
 
             state.previewVideo = uri;
-            state.user = that.state.user;
-
             that.setState(state);
 
             that._getToken({
@@ -325,7 +333,7 @@ export default class CreateVideo extends React.Component {
             })
                 .catch((error) => {
                     console.log(error);
-                    Alert.alert('upload failed');
+                    that.props.popAlert('upload failed');
                 })
                 .then((data) => {
                     if (data && data.success) {
@@ -352,15 +360,12 @@ export default class CreateVideo extends React.Component {
 
     _upload(body, type) {
 
-        console.log(body);
-
         let that = this;
         let xhr = new XMLHttpRequest();
         let url = config.qiniu.upload;
 
         if (type === 'audio') {
             url = config.cloudinary.video;
-            console.log('url', url);
         }
 
         let state = {};
@@ -376,13 +381,13 @@ export default class CreateVideo extends React.Component {
         xhr.onload = (() => {
 
             if (xhr.status !== 200) {
-                Alert.alert('Request failed');
+                that.props.popAlert('Oh no', 'Request failed');
                 console.log(xhr.responseText);
                 return;
             }
 
             if (!xhr.responseText) {
-                Alert.alert('Request failed');
+                that.props.popAlert('Oh no', 'Request failed');
                 return;
             }
 
@@ -408,8 +413,8 @@ export default class CreateVideo extends React.Component {
 
                 that.setState(newState);
 
-                let updateURL = config.api.base + config.api[type];
-                let accessToken = this.state.user.accessToken;
+                let updateURL = config.api[type];
+                let accessToken = this.props.user.accessToken;
                 let updateBody = {
                     accessToken: accessToken
                 };
@@ -425,10 +430,10 @@ export default class CreateVideo extends React.Component {
                     .catch((err) => {
                         console.log(err);
                         if (type === 'video') {
-                            Alert.alert('Video async failed, upload again!');
+                            that.props.popAlert('Oh no', 'Video async failed, upload again!');
                         }
                         else if (type === 'audio') {
-                            Alert.alert('Audio async failed, upload again!');
+                            that.props.popAlert('Oh no', 'Audio async failed, upload again!');
                         }
                     })
                     .then((data) => {
@@ -437,17 +442,17 @@ export default class CreateVideo extends React.Component {
                             mediaState[type + 'Id'] = data.data;
 
                             if (type === 'audio') {
-                                that._showModal();
+                                mediaState.modalVisible = true;
                                 mediaState.willPublish = true;
                             }
 
                             that.setState(mediaState);
                         } else {
                             if (type === 'video') {
-                                Alert.alert('Video async failed, upload again!');
+                                that.props.popAlert('Oh no', 'Video async failed, upload again!');
                             }
                             else if (type === 'audio') {
-                                Alert.alert('Audio async failed, upload again!');
+                                that.props.popAlert('Oh no', 'Audio async failed, upload again!');
                             }
                         }
                     })
@@ -482,22 +487,22 @@ export default class CreateVideo extends React.Component {
             audioId: this.state.audioId
         };
 
-        let creationURL = config.api.base + config.api.creations;
-        let user = this.state.user;
+        let creationURL = config.api.creations;
+        let user = this.props.user;
 
         if (user && user.accessToken) {
             body.accessToken = user.accessToken;
 
             this.setState({
-               publishing: true,
-               publishProgress: 0.4
+                publishing: true,
+                publishProgress: 0.4
             });
 
             HttpUtils
                 .post(creationURL, body)
                 .catch((err) => {
                     console.log(err);
-                    Alert.alert('Video upload failed');
+                    that.props.popAlert('Oh no', 'Video upload failed');
                 })
                 .then((data) => {
                     if (data && data.success) {
@@ -505,7 +510,7 @@ export default class CreateVideo extends React.Component {
                             publishProgress: 1
                         });
                         that._closeModal();
-                        Alert.alert('Video upload success');
+                        that.props.popAlert('Oh no', 'Video upload success');
 
                         let state = _.clone(defaultState);
                         that.setState(state);
@@ -513,15 +518,95 @@ export default class CreateVideo extends React.Component {
                         this.setState({
                             publishing: false
                         });
-                        Alert.alert('Video upload failed');
+                        that.props.popAlert('Oh no', 'Video upload failed');
                     }
                 })
         }
     }
 
+    renderModal() {
+        return (
+            <Modal
+                animationType={'slide'}
+                visible={true}
+                onRequestClose={() => {
+                    alert('Modal has been closed.');
+                }}>
+                <View style={styles.modalContainer}>
+                    <Ionicons
+                        name={'ios-close-outline'}
+                        style={styles.closeIcon}
+                        onPress={this._closeModal.bind(this)}/>
+
+                    {
+                        this.state.audioUploaded && !this.state.publishing
+                            ? <View style={styles.fieldBox}>
+                                <TextInput
+                                    placeholder={'Input your title'}
+                                    style={styles.inputField}
+                                    autoCapitalize={'none'}
+                                    autoCorrect={true}
+                                    defaultValue={this.state.title}
+                                    onChangeText={(text) => {
+                                        this.setState({
+                                            title: text
+                                        })
+                                    }}/>
+                            </View>
+                            : null
+                    }
+
+                    {
+                        this.state.publishing
+                            ? <View style={styles.loadingBox}>
+                                <Text style={styles.loadingText}>
+                                    Wait a moment, creating your own video...</Text>
+
+                                {
+                                    this.state.willPublish
+                                        ? <Text style={styles.loadingText}>
+                                            Mixing your video and audio...</Text>
+                                        : null
+                                }
+
+                                {
+                                    this.state.publishProgress > 0.3
+                                        ? <Text style={styles.loadingText}>
+                                            Uploading now...</Text>
+                                        : null
+                                }
+
+                                <Progress.Circle
+                                    size={60}
+                                    showsText={true}
+                                    color={'#ee735c'}
+                                    progress={this.state.publishProgress}/>
+                            </View>
+                            : null
+                    }
+
+                    <View style={styles.submitBox}>
+                        {
+                            this.state.audioUploaded && !this.state.publishing
+                                ? <ActionButton
+                                    style={styles.btn}
+                                    onPress={() => this._submit()}>Post videos</ActionButton>
+                                : null
+                        }
+                    </View>
+
+                </View>
+            </Modal>
+        )
+    }
+
     render() {
+        const videoProgress = this.getCurrentTimePercentage();
+
         return (
             <View style={styles.container}>
+                {this.state.modalVisible && this.renderModal()}
+
                 <StatusBar
                     barStyle="light-content"
                     backgroundColor="#ee735c"
@@ -534,7 +619,7 @@ export default class CreateVideo extends React.Component {
                     {
                         this.state.previewVideo && this.state.videoUploaded
                             ? <Text style={styles.toolbarEdit}
-                                    onPress={() => this._pickVideo()}>Change video</Text>
+                                    onPress={this._pickVideo.bind(this)}>Change video</Text>
                             : null
                     }
                 </View>
@@ -552,10 +637,10 @@ export default class CreateVideo extends React.Component {
                                         rate={this.state.rate}
                                         muted={this.state.muted}
                                         resizeMode={this.state.resizeMode}
-                                        onLoad={this._onLoaded}
-                                        onProgress={this._onProgress}
-                                        onEnd={this._onEnd}
-                                        onError={this._onError}
+                                        onLoad={this._onLoad.bind(this)}
+                                        onProgress={this._onProgress.bind(this)}
+                                        onEnd={this._onEnd.bind(this)}
+                                        onError={this._onError.bind(this)}
                                         repeat={this.state.repeat}
                                         paused={this.state.paused}
                                     />
@@ -569,7 +654,7 @@ export default class CreateVideo extends React.Component {
                                                     styleAttr="Horizontal"
                                                     indeterminate={false}
                                                     color='#ee735c'
-                                                    progress={this.state.videoUploadedProgress}/>
+                                                    progress={videoProgress}/>
                                                 <Text style={styles.progressTip}>
                                                     Producing the muted video,
                                                     finish {(this.state.videoUploadedProgress * 100).toFixed(2)}%
@@ -586,7 +671,7 @@ export default class CreateVideo extends React.Component {
                                                     styleAttr="Horizontal"
                                                     indeterminate={false}
                                                     color='#ee735c'
-                                                    progress={this.state.videoProgress}/>
+                                                    progress={videoProgress}/>
 
                                                 {
                                                     this.state.recording
@@ -607,9 +692,7 @@ export default class CreateVideo extends React.Component {
                                                     size={20}
                                                     style={styles.previewIcon}/>
                                                 <Text
-                                                    onPress={() => {
-                                                        this._preview()
-                                                    }}
+                                                    onPress={this._preview.bind(this)}
                                                     style={styles.previewText}>
                                                     Preview</Text>
                                             </View>
@@ -621,10 +704,10 @@ export default class CreateVideo extends React.Component {
 
                             </View>
                             : <TouchableOpacity style={styles.uploadContainer}
-                                                onPress={() => this._pickVideo()}>
+                                                onPress={this._pickVideo.bind(this)}>
                                 <View style={styles.uploadBox}>
                                     <Image
-                                        source={require('../assets/images/record.jpg')}
+                                        source={require('../../static/images/record.jpg')}
                                         style={styles.uploadIcon}
                                     />
                                     <Text style={styles.uploadTitle}>click to upload video</Text>
@@ -640,26 +723,8 @@ export default class CreateVideo extends React.Component {
                                     (this.state.recording || this.state.audioPlaying) && styles.recordOn]}>
                                     {
                                         this.state.counting && !this.state.recording
-                                            ? <CountDownText
-                                                style={styles.countBtn}
-                                                countType='seconds'
-                                                auto={true}
-                                                afterEnd={() => {
-                                                    this._record()
-                                                        .catch((error) => {
-                                                            console.log(error);
-                                                        })
-                                                }}
-                                                timeLeft={3}
-                                                step={-1}
-                                                startText='prepare record'
-                                                endText='Go'
-                                                intervalText={(sec) => {
-                                                    return sec === 0 ? 'Go' : sec
-                                                }}/>
-                                            : <TouchableOpacity onPress={() => {
-                                                this._counting()
-                                            }}>
+                                            ? <Text style={styles.countBtn}>{this.state.countText}</Text>
+                                            : <TouchableOpacity onPress={this._counting.bind(this)}>
                                                 <Ionicons
                                                     name={'ios-microphone-outline'}
                                                     style={styles.recordIcon}
@@ -677,9 +742,7 @@ export default class CreateVideo extends React.Component {
                                 {
                                     !this.state.audioUploaded && !this.state.audioUploading
                                         ? <Text
-                                            onPress={() => {
-                                                this._uploadAudio()
-                                            }}
+                                            onPress={this._uploadAudio.bind(this)}
                                             style={styles.uploadAudioText}>next</Text>
                                         : null
                                 }
@@ -698,82 +761,24 @@ export default class CreateVideo extends React.Component {
                     }
 
                 </View>
-
-                <Modal
-                    animationType={'fade'}
-                    visible={this.state.modalVisible}
-                    onRequestClose={() => {
-                        alert('Modal has been closed.');
-                    }}>
-                    <View style={styles.modalContainer}>
-                        <Ionicons
-                            name={'ios-close-outline'}
-                            style={styles.closeIcon}
-                            onPress={() => this._closeModal()}/>
-
-                        {
-                            this.state.audioUploaded && !this.state.publishing
-                            ? <View style={styles.fieldBox}>
-                                    <TextInput
-                                        placeholder={'Input your title'}
-                                        style={styles.inputField}
-                                        autoCapitalize={'none'}
-                                        autoCorrect={true}
-                                        defaultValue={this.state.title}
-                                        onChangeText={(text) => {
-                                            this.setState({
-                                                title: text
-                                            })
-                                        }}/>
-                                </View>
-                            : null
-                        }
-
-                        {
-                            this.state.publishing
-                            ? <View style={styles.loadingBox}>
-                                    <Text style={styles.loadingText}>
-                                        Wait a moment, creating your own video...</Text>
-
-                                    {
-                                        this.state.willPublish
-                                        ? <Text style={styles.loadingText}>
-                                                Mixing your video and audio...</Text>
-                                        : null
-                                    }
-
-                                    {
-                                        this.state.publishProgress > 0.3
-                                        ? <Text style={styles.loadingText}>
-                                                Uploading now...</Text>
-                                        : null
-                                    }
-
-                                    <Progress.Circle
-                                        size={60}
-                                        showsText={true}
-                                        color={'#ee735c'}
-                                        progress={this.state.publishProgress}/>
-                                </View>
-                            : null
-                        }
-
-                        <View style={styles.submitBox}>
-                            {
-                                this.state.audioUploaded && !this.state.publishing
-                                ?  <ActionButton
-                                        style={styles.btn}
-                                        onPress={() => this._submit()}>Post videos</ActionButton>
-                                : null
-                            }
-                        </View>
-
-                    </View>
-                </Modal>
+                <Popup {...this.props}/>
             </View>
         );
     }
 }
+
+function mapStateToProps(state) {
+    return {
+        popup: state.get('app').popup
+    }
+}
+
+function mapDispatchToProps(dispatch) {
+    return bindActionCreators(appActions, dispatch)
+}
+
+export default connect(mapStateToProps, mapDispatchToProps)(CreateVideo)
+
 
 const styles = StyleSheet.create({
     container: {
@@ -781,6 +786,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#F5FCFF'
     },
     header: {
+        height: 50,
         paddingTop: 12,
         paddingBottom: 12,
         backgroundColor: '#ee735c',

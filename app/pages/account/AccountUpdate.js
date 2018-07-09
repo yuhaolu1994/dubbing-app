@@ -7,17 +7,17 @@ import {
     TouchableOpacity,
     Dimensions,
     Image,
-    AsyncStorage,
-    Alert,
-    Modal, TextInput,
+    TextInput,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import ImagePicker from 'react-native-image-picker';
-import {config} from "../utils/Config";
-import HttpUtils from "../utils/HttpUtils";
+import {config} from "../../common/Config";
+import HttpUtils from "../../common/HttpUtils";
 import * as Progress from 'react-native-progress';
 import {Button} from 'react-native-elements';
 import ActionButton from "react-native-button";
+import Popup from "../../components/popup";
+import {avatar} from "../../common/ThumbUtils";
 
 let width = Dimensions.get('window').width;
 
@@ -35,77 +35,25 @@ const photoOptions = {
     }
 };
 
-export default class Profile extends React.Component {
+export default class AccountUpdate extends React.Component {
 
     constructor(props) {
         super(props);
-        let user = this.props.screenProps.user || {};
+        const user = this.props.user || {};
         this.state = {
             user: user,
             avatarProgress: 0,
             avatarUploading: false,
-            modalVisible: false
         }
-    }
-
-    _edit() {
-        this.setState({
-            modalVisible: true
-        });
-    }
-
-    _closeModal() {
-        this.setState({
-            modalVisible: false
-        });
     }
 
     componentDidMount() {
-        this._getUser();
-    }
-
-    avatar(id, type) {
-        if (id.indexOf('http') > -1) {
-            return id;
-        }
-
-        if (id.indexOf('data:image') > -1) {
-            return id;
-        }
-
-        if (id.indexOf('avatar/') > -1) {
-            return config.cloudinary.base + '/' + type + '/upload/' + id;
-        }
-
-        console.log('http://pb3k12o07.bkt.clouddn.com/' + id);
-
-        return 'http://pb3k12o07.bkt.clouddn.com/' + id;
-    }
-
-    _getUser() {
-        let that = this;
-
-        AsyncStorage.getItem('user')
-            .then((data) => {
-                let user;
-                if (data) {
-                    user = JSON.parse(data);
-                }
-
-                if (user.accessToken !== null) {
-                    that.setState({
-                        user: user
-                    });
-                }
-            })
-            .catch((error) => {
-                console.log(error);
-            });
+        this.props.checkUserStatus()
     }
 
     _getQiniuToken() {
         let accessToken = this.state.user.accessToken;
-        let signatureURL = config.api.base + config.api.signature;
+        let signatureURL = config.api.signature;
 
         return HttpUtils.post(signatureURL, {
             accessToken: accessToken,
@@ -163,13 +111,13 @@ export default class Profile extends React.Component {
 
         xhr.onload = (() => {
             if (xhr.status !== 200) {
-                Alert.alert('Request failed');
+                that.props.popAlert('Oh on', 'Request failed');
                 console.log(xhr.responseText);
                 return;
             }
 
             if (!xhr.responseText) {
-                Alert.alert('Request failed');
+                that.props.popAlert('Oh on', 'Request failed');
                 return;
             }
 
@@ -199,7 +147,7 @@ export default class Profile extends React.Component {
                     user: user
                 });
 
-                that._asyncUser(true);
+                that._asyncUser();
             }
         });
 
@@ -218,31 +166,11 @@ export default class Profile extends React.Component {
         xhr.send(body);
     }
 
-    _asyncUser(isAvatar) {
-        let that = this;
-        let user = this.state.user;
-
-        if (user && user.accessToken) {
-            let url = config.api.base + config.api.update;
-
-            HttpUtils.post(url, user)
-                .then((data) => {
-                    if (data && data.success) {
-                        let user = data.data;
-
-                        if (isAvatar) {
-                            Alert.alert('Avatar update success');
-                        }
-
-                        that.setState({
-                            user: user
-                        }, () => {
-                            that._closeModal();
-                            AsyncStorage.setItem('user', JSON.stringify(user));
-                        });
-                    }
-                })
-        }
+    _asyncUser() {
+        this.props.updateUserInfo(this.state.user)
+            .then(() => {
+                this.props.popAlert('Good job', 'Avatar update success')
+            });
     }
 
     _changeUserState(key, value) {
@@ -254,14 +182,8 @@ export default class Profile extends React.Component {
         });
     }
 
-    _submit() {
-        console.log(this.state.user);
-        this._asyncUser();
-    }
-
-
     render() {
-        let user = this.state.user;
+        const user = this.state.user || {};
 
         return (
             <View style={styles.container}>
@@ -269,11 +191,6 @@ export default class Profile extends React.Component {
                     barStyle="light-content"
                     backgroundColor="#ee735c"
                 />
-
-                <View style={styles.header}>
-                    <Text style={styles.headerTitle}>Your Account</Text>
-                    <Text style={styles.toolbarEdit} onPress={() => this._edit()}>EDITT</Text>
-                </View>
 
                 {
                     user.avatar
@@ -289,7 +206,7 @@ export default class Profile extends React.Component {
                                             color={'#ee735c'}
                                             progress={this.state.avatarProgress}/>
                                         : <Image
-                                            source={{uri: this.avatar(user.avatar, 'image')}}
+                                            source={{uri: avatar(user.avatar)}}
                                             style={styles.avatar}/>
                                 }
                                 <Text style={styles.avatarTip}>Change your avatar</Text>
@@ -317,93 +234,79 @@ export default class Profile extends React.Component {
                         </TouchableOpacity>
                 }
 
-                <Modal
-                    animationType={'fade'}
-                    visible={this.state.modalVisible}
-                    onRequestClose={() => {
-                        alert('Modal has been closed.');
-                    }}>
-                    <View style={styles.modalContainer}>
-                        <Ionicons
-                            name={'ios-close-outline'}
-                            style={styles.closeIcon}
-                            onPress={() => this._closeModal()}/>
-
-                        <View style={styles.fieldItem}>
-                            <Text style={styles.label}>NickName</Text>
-                            <TextInput
-                                placeholder={'Input your nickname'}
-                                style={styles.inputField}
-                                autoCapitalize={'none'}
-                                autoCorrect={true}
-                                defaultValue={user.nickname}
-                                onChangeText={(text) => {
-                                    this._changeUserState('nickname', text);
-                                }}/>
-                        </View>
-
-                        <View style={styles.fieldItem}>
-                            <Text style={styles.label}>Type</Text>
-                            <TextInput
-                                placeholder={'Input the type'}
-                                style={styles.inputField}
-                                autoCapitalize={'none'}
-                                autoCorrect={true}
-                                defaultValue={user.breed}
-                                onChangeText={(text) => {
-                                    this._changeUserState('breed', text);
-                                }}/>
-                        </View>
-
-                        <View style={styles.fieldItem}>
-                            <Text style={styles.label}>Age</Text>
-                            <TextInput
-                                placeholder={'Input the age'}
-                                style={styles.inputField}
-                                autoCapitalize={'none'}
-                                autoCorrect={true}
-                                defaultValue={user.age}
-                                keyboardType={'phone-pad'}
-                                onChangeText={(text) => {
-                                    this._changeUserState('age', text);
-                                }}/>
-                        </View>
-
-                        <View style={styles.fieldItem}>
-                            <Text style={styles.label}>Sex</Text>
-                            <Button
-                                leftIcon={{
-                                    name: 'ios-male-outline',
-                                    type: 'ionicon'
-                                }}
-                                onPress={() => {
-                                    this._changeUserState('gender', 'male')
-                                }}
-                                buttonStyle={[styles.gender, user.gender === 'male' && styles.genderChecked]}
-                                title='male'/>
-
-                            <Button
-                                leftIcon={{
-                                    name: 'ios-female-outline',
-                                    type: 'ionicon'
-                                }}
-                                onPress={() => {
-                                    this._changeUserState('gender', 'female')
-                                }}
-                                buttonStyle={[styles.gender, user.gender === 'female' && styles.genderChecked]}
-                                title='female'/>
-                        </View>
-
-                        <ActionButton
-                            style={styles.btn}
-                            onPress={() => this._submit()}>Save Profile</ActionButton>
-
+                <View style={styles.modalContainer}>
+                    <View style={styles.fieldItem}>
+                        <Text style={styles.label}>NickName</Text>
+                        <TextInput
+                            placeholder={'Input your nickname'}
+                            style={styles.inputField}
+                            autoCapitalize={'none'}
+                            autoCorrect={true}
+                            defaultValue={user.nickname}
+                            onChangeText={(text) => {
+                                this._changeUserState('nickname', text);
+                            }}/>
                     </View>
-                </Modal>
 
-                <ActionButton
-                    style={styles.btn}
-                    onPress={this.props.screenProps.logout}>Logout</ActionButton>
+                    <View style={styles.fieldItem}>
+                        <Text style={styles.label}>Type</Text>
+                        <TextInput
+                            placeholder={'Input the type'}
+                            style={styles.inputField}
+                            autoCapitalize={'none'}
+                            autoCorrect={true}
+                            defaultValue={user.breed}
+                            onChangeText={(text) => {
+                                this._changeUserState('breed', text);
+                            }}/>
+                    </View>
+
+                    <View style={styles.fieldItem}>
+                        <Text style={styles.label}>Age</Text>
+                        <TextInput
+                            placeholder={'Input the age'}
+                            style={styles.inputField}
+                            autoCapitalize={'none'}
+                            autoCorrect={true}
+                            defaultValue={user.age}
+                            keyboardType={'phone-pad'}
+                            onChangeText={(text) => {
+                                this._changeUserState('age', text);
+                            }}/>
+                    </View>
+
+                    <View style={styles.fieldItem}>
+                        <Text style={styles.label}>Sex</Text>
+                        <Button
+                            leftIcon={{
+                                name: 'ios-male-outline',
+                                type: 'ionicon'
+                            }}
+                            onPress={() => {
+                                this._changeUserState('gender', 'male')
+                            }}
+                            buttonStyle={[styles.gender, user.gender === 'male' && styles.genderChecked]}
+                            title='male'/>
+
+                        <Button
+                            leftIcon={{
+                                name: 'ios-female-outline',
+                                type: 'ionicon'
+                            }}
+                            onPress={() => {
+                                this._changeUserState('gender', 'female')
+                            }}
+                            buttonStyle={[styles.gender, user.gender === 'female' && styles.genderChecked]}
+                            title='female'/>
+                    </View>
+
+                    <ActionButton
+                        style={styles.btn}
+                        onPress={this._asyncUser.bind(this)}>Save Profile</ActionButton>
+
+                </View>
+
+                <Popup {...this.props}/>
 
             </View>
         );
@@ -414,28 +317,6 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#F5FCFF'
-    },
-    header: {
-        paddingTop: 12,
-        paddingBottom: 12,
-        backgroundColor: '#ee735c',
-        flexDirection: 'row'
-    },
-    headerTitle: {
-        flex: 1,
-        color: '#fff',
-        fontSize: 16,
-        textAlign: 'center',
-        fontWeight: '600'
-    },
-    toolbarEdit: {
-        position: 'absolute',
-        right: 14,
-        top: 14,
-        color: '#fff',
-        textAlign: 'right',
-        fontWeight: '600',
-        fontSize: 14
     },
     avatarContainer: {
         width: width,
@@ -474,15 +355,6 @@ const styles = StyleSheet.create({
         flex: 1,
         paddingTop: 50,
         backgroundColor: '#fff'
-    },
-    closeIcon: {
-        position: 'absolute',
-        width: 40,
-        height: 40,
-        fontSize: 32,
-        right: 20,
-        top: 30,
-        color: '#ee735c'
     },
     fieldItem: {
         flexDirection: 'row',

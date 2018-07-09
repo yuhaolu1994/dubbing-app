@@ -1,9 +1,12 @@
 import React from 'react';
-import {StyleSheet, Text, TextInput, View, Alert} from "react-native";
+import {StyleSheet, Text, TextInput, View, Dimensions} from "react-native";
 import Button from "react-native-button";
-import HttpUtils from "../utils/HttpUtils";
-import {config} from "../utils/Config";
-import CountDownText from "../utils/CountDownText";
+import HttpUtils from "../../common/HttpUtils";
+import {config} from "../../common/Config";
+import CountDownText from "../../common/CountDownText";
+import Popup from "../../components/popup";
+
+const {width} = Dimensions.get('window');
 
 export default class Login extends React.Component {
 
@@ -35,26 +38,26 @@ export default class Login extends React.Component {
         let phoneNumber = this.state.phoneNumber;
 
         if (!phoneNumber) {
-            return Alert.alert('Phone number should not be none');
+            return that.props.popAlert('Oh no', 'Phone number should not be none');
         }
 
         let body = {
             phoneNumber: phoneNumber
         };
 
-        let registerURL = config.api.base + config.api.register;
+        let registerURL = config.api.register;
 
         HttpUtils.post(registerURL, body)
             .then((data) => {
                 if (data && data.success) {
                     that._showVerifyCode();
                 } else {
-                    Alert.alert('Failed to get verify code, please check the phone number');
+                    that.props.popAlert('Oh no', 'Failed to get verify code, please check the phone number');
                 }
             })
             .catch((error) => {
                 console.log(error);
-                Alert.alert('Failed to get verify code, check the Internet connection');
+                that.props.popAlert('Oh no', 'Failed to get verify code, check the Internet connection');
             });
     }
 
@@ -64,7 +67,7 @@ export default class Login extends React.Component {
         let verifyCode = this.state.verifyCode;
 
         if (!phoneNumber || !verifyCode) {
-            return Alert.alert('Phone number or verify code should not be none');
+            return that.props.popAlert('Oh no', 'Phone number or verify code should not be none');
         }
 
         let body = {
@@ -72,19 +75,19 @@ export default class Login extends React.Component {
             verifyCode: verifyCode
         };
 
-        let verifyURL = config.api.base + config.api.verify;
+        let verifyURL = config.api.verify;
 
         HttpUtils.post(verifyURL, body)
             .then((data) => {
                 if (data && data.success) {
-                    that.props._afterLogin(data.data);
+                    that.props.afterLogin(data.data);
                 } else {
-                    Alert.alert('Failed to get verify code, please check the phone number');
+                    that.props.popAlert('Oh no', 'Failed to get verify code, please check the phone number');
                 }
             })
             .catch((error) => {
                 console.log(error);
-                Alert.alert('Failed to verify, check the Internet connection');
+                that.props.popAlert('Oh no', 'Failed to verify, check the Internet connection');
             });
     }
 
@@ -99,7 +102,7 @@ export default class Login extends React.Component {
                     autoCapitalize={'none'}
                     autoCorrect={false}
                     keyboardType={'phone-pad'}
-                    style={styles.inputField}
+                    style={[styles.inputField, styles.verifyField]}
                     onChangeText={(text) => {
                         this.setState({
                             phoneNumber: text
@@ -157,6 +160,9 @@ export default class Login extends React.Component {
                             style={styles.btn}
                             onPress={() => this._sendVerifyCode()}>Get verify code</Button>
                 }
+
+                <Popup {...this.props}/>
+
             </View>
         );
     }
@@ -184,6 +190,9 @@ const styles = StyleSheet.create({
         fontSize: 16,
         backgroundColor: '#fff',
         borderRadius: 4
+    },
+    verifyField: {
+        width: width - 140
     },
     inputVerifyCode: {
         flex: 1,

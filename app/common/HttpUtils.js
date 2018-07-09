@@ -1,5 +1,5 @@
-import queryString from 'query-string';
-import _ from 'lodash';
+import * as queryString from 'query-string';
+import * as _ from 'lodash';
 import React from 'react';
 import {config} from "./Config";
 

@@ -1,3 +1,5 @@
+const baseUrl = 'http://192.168.0.10:3000/';
+
 export const config = {
     header: {
         method: 'POST',
@@ -27,14 +29,14 @@ export const config = {
     api: {
         // base: 'http://rapapi.org/mockjs/34769/',
         base: 'http://192.168.0.10:3000/',
-        creations: 'api/creations',
-        comment: 'api/comments',
-        up: 'api/up',
-        register: 'api/u/signup',
-        verify: 'api/u/verify',
-        signature: 'api/signature',
-        update: 'api/u/update',
-        video: 'api/creations/video',
-        audio: 'api/creations/audio'
+        creations: baseUrl + 'api/creations',
+        comment: baseUrl + 'api/comments',
+        up: baseUrl + 'api/up',
+        register: baseUrl + 'api/u/signup',
+        verify: baseUrl + 'api/u/verify',
+        signature: baseUrl + 'api/signature',
+        update: baseUrl + 'api/u/update',
+        video: baseUrl + 'api/creations/video',
+        audio: baseUrl + 'api/creations/audio'
     }
 };
