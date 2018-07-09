@@ -66,25 +66,17 @@ The front end part of a dubbing full-stack project.
 ## Architecture
 
 ## Screenshots
-### check creation list
+### check creation list and detail
 ![](https://github.com/yuhaolu1994/DubbingApp/blob/master/art/creation_list.gif)
-
-### check creation detail
 ![](https://github.com/yuhaolu1994/DubbingApp/blob/master/art/creation_detail.gif)
 
-### create a new dubbing video
+### create and upload a new dubbing video
 ![](https://github.com/yuhaolu1994/DubbingApp/blob/master/art/creation_made.gif)
-
-### upload creation to server
 ![](https://github.com/yuhaolu1994/DubbingApp/blob/master/art/creation_post.gif)
-
-### added new creation review
 ![](https://github.com/yuhaolu1994/DubbingApp/blob/master/art/creation_list.gif)
 
-### update account avatar
+### update account avatar and profile
 ![](https://github.com/yuhaolu1994/DubbingApp/blob/master/art/account_avatar.gif)
-
-### update account profile
 ![](https://github.com/yuhaolu1994/DubbingApp/blob/master/art/account_profile.gif)
 
 
