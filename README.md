@@ -1,11 +1,6 @@
 # AwesomeDubbing
 ![](https://github.com/yuhaolu1994/DubbingApp/blob/master/android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png)
 
-## Screenshots
-### Check creation list and detail
-![](https://github.com/yuhaolu1994/DubbingApp/blob/master/art/new_creation.gif)
-![](https://github.com/yuhaolu1994/DubbingApp/blob/master/art/creation_detail.gif)
-
 ### Create and upload a new dubbing video
 ![](https://github.com/yuhaolu1994/DubbingApp/blob/master/art/creation_made.gif)
 ![](https://github.com/yuhaolu1994/DubbingApp/blob/master/art/creation_post.gif)
@@ -86,4 +81,7 @@ The front end part of a dubbing full-stack project.
 ### Video and audio processing 
 ![](https://github.com/yuhaolu1994/DubbingApp/blob/master/art/video_audio.png)
 
-
+## Screenshots
+### Check creation list and detail
+![](https://github.com/yuhaolu1994/DubbingApp/blob/master/art/new_creation.gif)
+![](https://github.com/yuhaolu1994/DubbingApp/blob/master/art/creation_detail.gif)
