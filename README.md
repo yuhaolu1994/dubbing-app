@@ -1,14 +1,6 @@
 # AwesomeDubbing
 ![](https://github.com/yuhaolu1994/DubbingApp/blob/master/android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png)
 
-### Create and upload a new dubbing video
-![](https://github.com/yuhaolu1994/DubbingApp/blob/master/art/creation_made.gif)
-![](https://github.com/yuhaolu1994/DubbingApp/blob/master/art/creation_post.gif)
-
-### Update account avatar and profile
-![](https://github.com/yuhaolu1994/DubbingApp/blob/master/art/account_avatar.gif)
-![](https://github.com/yuhaolu1994/DubbingApp/blob/master/art/account_profile.gif)
-
 ## Introduction
 This mobile app is developed by Webstorm 2018.1.5. Users can feel free to upload any videos and make their awesome dubbing for the videos. Currently, this mobile app part has been successfully built and run on One Plus 5T, which is running Android 8.1.0
 
@@ -85,3 +77,11 @@ The front end part of a dubbing full-stack project.
 ### Check creation list and detail
 ![](https://github.com/yuhaolu1994/DubbingApp/blob/master/art/new_creation.gif)
 ![](https://github.com/yuhaolu1994/DubbingApp/blob/master/art/creation_detail.gif)
+
+### Create and upload a new dubbing video
+![](https://github.com/yuhaolu1994/DubbingApp/blob/master/art/creation_made.gif)
+![](https://github.com/yuhaolu1994/DubbingApp/blob/master/art/creation_post.gif)
+
+### Update account avatar and profile
+![](https://github.com/yuhaolu1994/DubbingApp/blob/master/art/account_avatar.gif)
+![](https://github.com/yuhaolu1994/DubbingApp/blob/master/art/account_profile.gif)
