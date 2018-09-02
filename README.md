@@ -64,18 +64,24 @@ The front end part of a dubbing full-stack project.
 - [redux-thunk](https://www.npmjs.com/package/redux-thunk)
 
 ## Architecture
+### App register and login
+![](https://github.com/yuhaolu1994/DubbingApp/blob/master/art/app_startup.png)
+
+### Data flow in app
+![](https://github.com/yuhaolu1994/DubbingApp/blob/master/art/app_dataflow.png)
+
+### Video and audio processing 
+![](https://github.com/yuhaolu1994/DubbingApp/blob/master/art/video_audio.png)
 
 ## Screenshots
-### check creation list and detail
+### Check creation list and detail
 ![](https://github.com/yuhaolu1994/DubbingApp/blob/master/art/new_creation.gif)
 ![](https://github.com/yuhaolu1994/DubbingApp/blob/master/art/creation_detail.gif)
 
-### create and upload a new dubbing video
+### Create and upload a new dubbing video
 ![](https://github.com/yuhaolu1994/DubbingApp/blob/master/art/creation_made.gif)
 ![](https://github.com/yuhaolu1994/DubbingApp/blob/master/art/creation_post.gif)
 
-### update account avatar and profile
+### Update account avatar and profile
 ![](https://github.com/yuhaolu1994/DubbingApp/blob/master/art/account_avatar.gif)
 ![](https://github.com/yuhaolu1994/DubbingApp/blob/master/art/account_profile.gif)
-
-
