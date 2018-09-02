@@ -1,3 +1,5 @@
+// It's better to use strings for type than Symbols because strings are serializable.
+// Types should typically be defined as string constants.
 
 // app start up
 export const APP_BOOTED = 'APP_BOOTED';

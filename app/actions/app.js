@@ -1,10 +1,15 @@
 import {AsyncStorage} from 'react-native';
+// use (import * as reducers) to get them as an object with their names as the keys
 import * as types from './actionTypes';
 import HttpUtils from "../common/HttpUtils";
 import {config} from "../common/Config";
 
+// Actions are the only way to get data into the store
 export const popAlert = (title, content) => {
+    // dispatch, getState are store function
     return (dispatch, getState) => {
+        // A basic Flux Standard Action
+        // Types should typically be defined as string constants
         dispatch({
             type: types.SHOW_ALERT,
             payload: {

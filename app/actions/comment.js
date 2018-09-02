@@ -10,6 +10,7 @@ export const fetchComments = (cid, feed) => {
         let comment;
         let id = '';
 
+        // getState(): last value returned by the store's reducer.
         const {
             creationId,
             commentList

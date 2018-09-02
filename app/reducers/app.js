@@ -1,3 +1,4 @@
+// use import * as reducers to get them as an object with their names as the keys
 import * as types from '../actions/actionTypes';
 
 const initialState = {
@@ -15,10 +16,14 @@ const initialState = {
     ]
 };
 
+// Actions are the only way to get data into the store
 export default appReducer = (state = initialState, action) => {
-
+    // the standard approach is definitely using a switch statement
+    // or a lookup table based on type
     switch (action.type) {
         case types.SHOW_ALERT:
+            // Using Object Spread Operator
+            // return { ...state, ...newData }
             return {
                 ...state,
                 popup: {

@@ -10,7 +10,7 @@ const initialState = {
 };
 
 export default commentReducer = (state = initialState, action) => {
-
+    // const { type, payload } = action;
     switch (action.type) {
 
         case types.FETCH_COMMENTS_START:

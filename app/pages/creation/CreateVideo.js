@@ -401,7 +401,6 @@ class CreateVideo extends React.Component {
             }
 
             if (response) {
-                console.log(response);
 
                 let newState = {};
                 newState[type] = response;

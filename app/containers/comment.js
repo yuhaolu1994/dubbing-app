@@ -29,7 +29,11 @@ class CommentContainer extends React.Component {
     }
 }
 
+// state in store update => UI props update
 const mapStateToProps = (state) => {
+
+    // state tree in store
+    // result of combineReducers: { app: {...}, creations: {...}, comments: {...} }
     const {
         user
     } = state.get('app');
@@ -38,6 +42,9 @@ const mapStateToProps = (state) => {
         isSending
     } = state.get('comments');
 
+    // any time the store is updated, mapStateToProps will be called.
+    // The results of mapStateToProps must be a plain object,
+    // which will be merged into the component’s props
     return {
         user,
         isSending
@@ -46,7 +53,10 @@ const mapStateToProps = (state) => {
 };
 
 function mapDispatchToProps (dispatch) {
+    // boundActionCreators  = (id) => dispatch(toggleTodo(id))
+    // wrap action creator with dispatch(), merge into props
     return bindActionCreators(commentActions, dispatch)
 }
 
+// inject store state and all action creators to component props
 export default connect(mapStateToProps, mapDispatchToProps)(CommentContainer)
