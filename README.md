@@ -15,15 +15,15 @@ The front end part of a dubbing full-stack project.
 1. clone this project (https://github.com/yuhaolu1994/DubbingApp)
 2. cd DubbingApp
 3. connect your android phone, use adb devices to check connection
-4. run react-native-run-android in terminal
+4. run react-native-run-android command in terminal
 
 ## Version
 `v 2.0`
-- use React Redux to refactor the codes
+- use React Redux to refactor the project
 
 `v 1.5`
-- add [back-end](https://github.com/yuhaolu1994/DubbingServer) server in front-end part 
-- post or fetch creations and comments to server
+- add [back-end](https://github.com/yuhaolu1994/DubbingServer) server to front-end part 
+- post/fetch creations and comments to/from server
 - register an account 
 - logout from current account
 
